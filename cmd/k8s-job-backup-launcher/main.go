@@ -25,7 +25,8 @@ func fatalIfError(err error) {
 
 func getUserNameFromPVCName(s string) string {
 	s = strings.TrimPrefix(s, "claim-")
-	for _, encode := range []string{"-20", "-2e"} {
+	s = strings.TrimSuffix(s, "-40c2fo-com")
+	for _, encode := range []string{"-20", "-2e", "-40"} {
 		if strings.Contains(s, encode) {
 			s = strings.ReplaceAll(s, encode, ".")
 		}
@@ -70,7 +71,7 @@ func main() {
 			},
 			{
 				Name:  config.BackupUsername,
-				Value: safeUserName,
+				Value: userName,
 			},
 		}
 
