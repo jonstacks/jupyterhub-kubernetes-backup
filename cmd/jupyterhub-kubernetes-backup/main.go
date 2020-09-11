@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -32,17 +33,18 @@ func main() {
 
 	switch strings.ToLower(backend) {
 	case "s3":
-		variables.Check(config.BackendS3Bucket, config.BackendS3Prefix)
+		variables.Check(config.BackendS3Bucket, config.BackendS3Prefix, config.BackupUsername)
 		FatalIfError(variables.Missing())
 
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
 		}))
 
+		prefix := fmt.Sprintf("%s/%s", config.Get(config.BackendS3Prefix), config.Get(config.BackupUsername))
 		bkend = backendprovider.NewS3(
 			sess,
 			config.Get(config.BackendS3Bucket),
-			config.Get(config.BackendS3Prefix),
+			prefix,
 		)
 
 	default:

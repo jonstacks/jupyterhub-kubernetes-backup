@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/config"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,25 +34,24 @@ func getUserNameFromPVCName(s string) string {
 }
 
 func main() {
+	var hasError = false
+	var jobsWg sync.WaitGroup
+
 	imageName, ok := os.LookupEnv("BACKUP_IMAGE_NAME")
 	if !ok {
 		fatalIfError(fmt.Errorf("No BACKUP_IMAGE_NAME variable supplied. Don't know how to launch backup container"))
 	}
 
-	config, err := rest.InClusterConfig()
+	clusterConfig, err := rest.InClusterConfig()
 	fatalIfError(err)
 
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(clusterConfig)
 	fatalIfError(err)
 
 	namespace := Namespace()
 
 	pvcList, err := clientset.CoreV1().PersistentVolumeClaims(namespace).List(context.TODO(), metav1.ListOptions{})
 	fatalIfError(err)
-
-	hasError := false
-
-	var jobsWg sync.WaitGroup
 
 	for _, pvc := range pvcList.Items {
 		// Jupyterhub spawns its user data PVCs with "claim-", we are not interested if it doesn't start with this
@@ -62,6 +62,35 @@ func main() {
 		userName := getUserNameFromPVCName(pvc.Name)
 		safeUserName := strings.ReplaceAll(userName, ".", "-")
 		resourceName := fmt.Sprintf("backup-users-home-%s-%s", safeUserName, time.Now().Format("200601021504"))
+
+		envVars := []corev1.EnvVar{
+			{
+				Name:  "LOCAL_PATH",
+				Value: "/backup",
+			},
+			{
+				Name:  config.BackupUsername,
+				Value: safeUserName,
+			},
+		}
+
+		copyVars := []string{
+			config.Backend,
+			config.BackendS3Bucket,
+			config.BackendS3Prefix,
+			config.BackupUsername,
+			config.AwsAccessKeyID,
+			config.AwsSecretAccessKey,
+		}
+
+		for _, name := range copyVars {
+			if val, ok := os.LookupEnv(name); ok {
+				envVars = append(envVars, corev1.EnvVar{
+					Name:  name,
+					Value: val,
+				})
+			}
+		}
 
 		// Now launch a job to back up the user's directory
 		job := &batchv1.Job{
@@ -87,16 +116,7 @@ func main() {
 								Image:           imageName,
 								Command:         []string{"/usr/local/bin/jupyterhub-kubernetes-backup"},
 								ImagePullPolicy: corev1.PullAlways,
-								Env: []corev1.EnvVar{
-									{
-										Name:  "BACKEND",
-										Value: "mock",
-									},
-									{
-										Name:  "LOCAL_PATH",
-										Value: "/backup",
-									},
-								},
+								Env:             envVars,
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "user-backup",
