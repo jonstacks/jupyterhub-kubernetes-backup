@@ -20,7 +20,7 @@ spec:
             app.kubernetes.io/instance: {{ .Release.Name }}
             helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
         spec:
-          restartPolicy: OnFailure
+          restartPolicy: Never
           {{- if .Values.serviceAccount.create }}
           serviceAccountName: {{ template "jupyterhub-kubernetes-backup.serviceAccountName" . }}
           {{- end }}
