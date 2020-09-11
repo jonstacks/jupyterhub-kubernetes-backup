@@ -14,6 +14,15 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
+backend:
+  type: mock
+  # If using the s3 backend, supply the options here
+  # s3:
+  #   bucket: my-bucket
+  #   prefix: my-prefix
+  #   accessKey: my-access-key
+  #   secret: my-secret
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
