@@ -1,4 +1,4 @@
-# go-template
+# jupyterhub-kubernetes-s3-backup
 My golang project template
 
 
