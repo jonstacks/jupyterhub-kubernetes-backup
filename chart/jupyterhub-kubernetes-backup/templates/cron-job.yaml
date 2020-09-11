@@ -28,6 +28,7 @@ spec:
           - name: jupyterhub-backup-launcher
             image: {{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}
             pullPolicy: {{ .Values.image.pullPolicy }}
+            command: ["/usr/local/bin/k8s-job-backup-launcher"]
             env:
             - name: POD_NAMESPACE
               valueFrom:
