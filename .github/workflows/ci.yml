@@ -16,3 +16,16 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
     - run: make test
+
+  helm:
+    name: Helm
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v2
+    - name: Lint
+      run: helm lint .
+      working-directory: chart/jupyterhub-kubernetes-backup
+    - name: Template
+      run: helm template .
+      working-directory: chart/jupyterhub-kubernetes-backup
