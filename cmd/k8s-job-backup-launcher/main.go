@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -49,6 +50,8 @@ func main() {
 	fatalIfError(err)
 
 	hasError := false
+
+	var jobsWg sync.WaitGroup
 
 	for _, pvc := range pvcList.Items {
 		// Jupyterhub spawns its user data PVCs with "claim-", we are not interested if it doesn't start with this
@@ -125,12 +128,53 @@ func main() {
 		if err != nil {
 			log.Printf("Err creating backup job for '%s': %s", pvc.Name, err.Error())
 			hasError = true
-		} else {
-			log.Printf("Successfully created job '%s' for backing up '%s'\n", resp.Name, pvc.Name)
+			continue
 		}
+
+		log.Printf("Successfully created job '%s' for backing up '%s'\n", resp.Name, pvc.Name)
+		jobsWg.Add(1)
+
+		// Now start go-routing to wait and monitor for job to be done...
+		go func(jobName string) {
+			defer jobsWg.Done()
+			defer func() {
+				log.Printf("Deleting job '%s'", jobName)
+				err := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
+				if err != nil {
+					log.Printf("Error deleting job '%s': %s", jobName, err)
+				}
+			}()
+
+			timeout := time.After(10 * time.Minute)
+
+			for {
+				select {
+				case <-timeout:
+					log.Printf("Timeout occured waiting for job to finish")
+					return
+				default:
+					log.Printf("Checking on job '%s' status", jobName)
+					resp, err := clientset.BatchV1().Jobs(namespace).Get(context.TODO(), jobName, metav1.GetOptions{})
+					if err != nil {
+						log.Printf("Error checking job '%s' status: %s", jobName, err)
+						continue
+					}
+
+					// Job was successful
+					if resp.Status.CompletionTime != nil {
+						time.Sleep(30 * time.Second)
+						return
+					}
+				}
+
+				time.Sleep(10 * time.Second)
+			}
+		}(job.Name)
 	}
 
 	if hasError {
 		log.Println("Error: Some jobs failed to create")
 	}
+
+	jobsWg.Wait()
 }
