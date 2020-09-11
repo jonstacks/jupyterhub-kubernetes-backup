@@ -7,4 +7,4 @@ COPY . .
 RUN make install
 
 FROM alpine
-COPY --from=builder /go/bin/* /usr/local/bin
+COPY --from=builder /go/bin/* /usr/local/bin/
