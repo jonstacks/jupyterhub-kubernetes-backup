@@ -36,5 +36,25 @@ spec:
                   fieldPath: metadata.namespace
             - name: BACKUP_IMAGE_NAME
               value: "{{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}"
+            - name: BACKEND
+              value: "{{ .Values.backend.type }}"
+            {{- if .Values.backend.s3 }}
+            {{- if .Values.backend.s3.bucket }}
+            - name: BACKEND_S3_BUCKET
+              value: "{{ .Values.backend.s3.bucket }}"
+            {{- end }}
+            {{- if .Values.backend.s3.prefix }}
+            - name: BACKEND_S3_PREFIX
+              value: "{{ .Values.backend.s3.prefix }}"
+            {{- end }}
+            {{- if .Values.backend.s3.accessKey }}
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.backend.s3.accessKey }}"
+            {{- end }}
+            {{- if .Values.backend.s3.secret }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "{{ .Values.backend.s3.secret }}"
+            {{- end }}
+            {{- end }}
             resources:
               {{ toYaml .Values.resources | nindent 14 }}
