@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +48,8 @@ func main() {
 	pvcList, err := clientset.CoreV1().PersistentVolumeClaims(namespace).List(context.TODO(), metav1.ListOptions{})
 	fatalIfError(err)
 
+	hasError := false
+
 	for _, pvc := range pvcList.Items {
 		// Jupyterhub spawns its user data PVCs with "claim-", we are not interested if it doesn't start with this
 		if !strings.HasPrefix(pvc.Name, "claim-") {
@@ -55,6 +58,7 @@ func main() {
 
 		userName := getUserNameFromPVCName(pvc.Name)
 		safeUserName := strings.ReplaceAll(userName, ".", "-")
+		resourceName := fmt.Sprintf("backup-users-home-%s-%s", safeUserName, time.Now().Format("200601021504"))
 
 		// Now launch a job to back up the user's directory
 		job := &batchv1.Job{
@@ -63,13 +67,13 @@ func main() {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   safeUserName,
+				Name:   resourceName,
 				Labels: make(map[string]string),
 			},
 			Spec: batchv1.JobSpec{
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   safeUserName,
+						Name:   resourceName,
 						Labels: make(map[string]string),
 					},
 					Spec: corev1.PodSpec{
@@ -119,9 +123,15 @@ func main() {
 		log.Printf("Creating job to back up pvc '%s'", pvc.Name)
 		resp, err := clientset.BatchV1().Jobs(namespace).Create(context.TODO(), job, metav1.CreateOptions{})
 		if err != nil {
-			fmt.Printf("Err creating backup job for '%s': %s", pvc.Name, err.Error())
+			log.Printf("Err creating backup job for '%s': %s", pvc.Name, err.Error())
+			hasError = true
 		} else {
-			fmt.Printf("Successfully created job '%s' for backing up '%s'", resp.Name, pvc.Name)
+			log.Printf("Successfully created job '%s' for backing up '%s'\n", resp.Name, pvc.Name)
 		}
+	}
+
+	if hasError {
+		log.Println("Error: Some jobs failed to create")
+		os.Exit(1)
 	}
 }
