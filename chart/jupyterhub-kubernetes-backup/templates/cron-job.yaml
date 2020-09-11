@@ -1,0 +1,37 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: jupyterhub-backup-launcher
+  labels:
+    app.kubernetes.io/name: {{ include "jupyterhub-kubernetes-backup.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+spec:
+  schedule: {{ .Values.cronJob.schedule | quote }}
+  concurrencyPolicy: {{ .Values.cronJob.concurrencyPolicy }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: {{ .Release.Name }}
+          labels:
+            app.kubernetes.io/name: {{ include "jupyterhub-kubernetes-backup.name" . }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+        spec:
+          restartPolicy: OnFailure
+          {{- if .Values.serviceAccount.create }}
+          serviceAccountName: {{ template "jupyterhub-kubernetes-backup.serviceAccountName" . }}
+          {{- end }}
+          containers:
+          - name: jupyterhub-backup-launcher
+            image: {{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}
+            pullPolicy: {{ .Values.image.pullPolicy }}
+            env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            resources:
+              {{ toYaml .Values.resources | nindent 14 }}
