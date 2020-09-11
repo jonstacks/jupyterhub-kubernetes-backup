@@ -98,6 +98,8 @@ func main() {
 								},
 							},
 						},
+						RestartPolicy:    corev1.RestartPolicyNever,
+						ImagePullSecrets: []corev1.LocalObjectReference{},
 						Volumes: []corev1.Volume{
 							{
 								Name: "user-backup",
