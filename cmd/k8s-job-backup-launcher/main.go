@@ -132,6 +132,5 @@ func main() {
 
 	if hasError {
 		log.Println("Error: Some jobs failed to create")
-		os.Exit(1)
 	}
 }
