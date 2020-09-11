@@ -61,7 +61,7 @@ func main() {
 
 		userName := getUserNameFromPVCName(pvc.Name)
 		safeUserName := strings.ReplaceAll(userName, ".", "-")
-		resourceName := fmt.Sprintf("backup-users-home-%s-%s", safeUserName, time.Now().Format("200601021504"))
+		resourceName := fmt.Sprintf("backup-users-home-%s-%s", pvc.Name, time.Now().Format("200601021504"))
 
 		envVars := []corev1.EnvVar{
 			{
@@ -177,6 +177,7 @@ func main() {
 					resp, err := clientset.BatchV1().Jobs(namespace).Get(context.TODO(), jobName, metav1.GetOptions{})
 					if err != nil {
 						log.Printf("Error checking job '%s' status: %s", jobName, err)
+						time.Sleep(30 * time.Second)
 						continue
 					}
 
@@ -184,6 +185,13 @@ func main() {
 					if resp.Status.CompletionTime != nil {
 						time.Sleep(30 * time.Second)
 						return
+					}
+
+					for _, cond := range resp.Status.Conditions {
+						if cond.Type == batchv1.JobFailed {
+							log.Printf("Job %s failed. Leaving it around for diagnostics", jobName)
+							return
+						}
 					}
 				}
 
