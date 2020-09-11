@@ -14,8 +14,8 @@ install:
 	go install -v ./cmd/...
 
 clean:
-	rm -rf ./bin
-	rm -r coverage.txt
+	-rm -rf ./bin
+	-rm -r coverage.txt
 
 .PHONY:
 docker-image:
