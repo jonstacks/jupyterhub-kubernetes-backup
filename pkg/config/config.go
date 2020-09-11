@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 // Default config constants
 const (
@@ -14,6 +17,7 @@ const (
 
 	AwsAccessKeyID     = "AWS_ACCESS_KEY_ID"
 	AwsSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	AwsDefaultRegion   = "AWS_DEFAULT_REGION"
 )
 
 // Get gets the environment variable by name
@@ -27,4 +31,10 @@ func GetDefault(name string, defaultValue string) string {
 		return val
 	}
 	return defaultValue
+}
+
+// GetS3UserPrefix should only be called after validating the config. It returns
+// the s3 prefix for uploads.
+func GetS3UserPrefix() string {
+	return fmt.Sprintf("%s/%s", Get(BackendS3Prefix), Get(BackupUsername))
 }

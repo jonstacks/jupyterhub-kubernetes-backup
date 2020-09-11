@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -40,7 +39,7 @@ func main() {
 			SharedConfigState: session.SharedConfigEnable,
 		}))
 
-		prefix := fmt.Sprintf("%s/%s", config.Get(config.BackendS3Prefix), config.Get(config.BackupUsername))
+		prefix := config.GetS3UserPrefix()
 		bkend = backendprovider.NewS3(
 			sess,
 			config.Get(config.BackendS3Bucket),

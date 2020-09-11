@@ -22,6 +22,7 @@ backend:
   #   prefix: my-prefix
   #   accessKey: my-access-key
   #   secret: my-secret
+  #   region: us-west-2
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

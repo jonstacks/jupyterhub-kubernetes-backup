@@ -81,6 +81,7 @@ func main() {
 			config.BackupUsername,
 			config.AwsAccessKeyID,
 			config.AwsSecretAccessKey,
+			config.AwsDefaultRegion,
 		}
 
 		for _, name := range copyVars {

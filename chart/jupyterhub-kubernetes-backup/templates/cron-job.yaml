@@ -55,6 +55,10 @@ spec:
             - name: AWS_SECRET_ACCESS_KEY
               value: "{{ .Values.backend.s3.secret }}"
             {{- end }}
+            {{- if .Values.backend.s3.region }}
+            - name: AWS_DEFAULT_REGION
+              value: "{{ .Values.backend.s3.region }}"
+            {{- end }}
             {{- end }}
             resources:
               {{ toYaml .Values.resources | nindent 14 }}
