@@ -34,5 +34,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: BACKUP_IMAGE_NAME
+              value: "{{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}"
             resources:
               {{ toYaml .Values.resources | nindent 14 }}
