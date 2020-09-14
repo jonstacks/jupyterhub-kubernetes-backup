@@ -1,4 +1,4 @@
-package main
+package k8scontrib
 
 import (
 	"io/ioutil"
