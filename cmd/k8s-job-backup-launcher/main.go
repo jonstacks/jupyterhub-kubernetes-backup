@@ -9,7 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/backup"
 	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/config"
+	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/k8scontrib"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,17 +23,6 @@ func fatalIfError(err error) {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-}
-
-func getUserNameFromPVCName(s string) string {
-	s = strings.TrimPrefix(s, "claim-")
-	s = strings.TrimSuffix(s, "-40c2fo-com")
-	for _, encode := range []string{"-20", "-2e", "-40"} {
-		if strings.Contains(s, encode) {
-			s = strings.ReplaceAll(s, encode, ".")
-		}
-	}
-	return s
 }
 
 func main() {
@@ -49,7 +40,7 @@ func main() {
 	clientset, err := kubernetes.NewForConfig(clusterConfig)
 	fatalIfError(err)
 
-	namespace := Namespace()
+	namespace := k8scontrib.Namespace()
 
 	pvcList, err := clientset.CoreV1().PersistentVolumeClaims(namespace).List(context.TODO(), metav1.ListOptions{})
 	fatalIfError(err)
@@ -60,7 +51,7 @@ func main() {
 			continue
 		}
 
-		userName := getUserNameFromPVCName(pvc.Name)
+		userName := backup.GetUserNameFromPVCName(pvc.Name)
 		safeUserName := strings.ReplaceAll(userName, ".", "-")
 		resourceName := fmt.Sprintf("backup-users-home-%s-%s", pvc.Name, time.Now().Format("200601021504"))
 
