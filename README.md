@@ -1,5 +1,7 @@
 # jupyterhub-kubernetes-backup
 
+[![codecov](https://codecov.io/gh/jonstacks/jupyterhub-kubernetes-backup/branch/master/graph/badge.svg)](https://codecov.io/gh/jonstacks/jupyterhub-kubernetes-backup)
+
 Backup PVCs created by jupyterhub to S3(the only backend supported right now).
 
 <!-- TOC -->
