@@ -11,9 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+type s3Uploader interface {
+	Upload(*s3manager.UploadInput, ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
+}
+
 // S3 is an AWS S3 backend for storing the files
 type S3 struct {
-	uploader *s3manager.Uploader
+	uploader s3Uploader
 	bucket   string
 	prefix   string
 }
