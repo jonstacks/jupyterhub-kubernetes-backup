@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,6 +23,14 @@ func (uploader testS3Uploader) Upload(*s3manager.UploadInput, ...func(*s3manager
 
 func TestS3ImplementsBackend(t *testing.T) {
 	assert.Implements(t, (*Backend)(nil), new(S3))
+}
+
+func TestNewS3(t *testing.T) {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+	s3 := NewS3(sess, "my-test-bucket", "my-test/prefix")
+	assert.Equal(t, s3.bucket, "my-test-bucket")
 }
 
 func TestSaveReturnsNilWhenNoErrors(t *testing.T) {
