@@ -48,7 +48,47 @@ func main() {
 	for _, pvc := range pvcList.Items {
 		// Jupyterhub spawns its user data PVCs with "claim-", we are not interested if it doesn't start with this
 		if !strings.HasPrefix(pvc.Name, "claim-") {
+			log.Printf("Skipping pvc '%s'", pvc.Name)
 			continue
+		}
+
+		// If a pod is running, this is the name we'd expect to find
+		podName := strings.Replace(pvc.Name, "claim", "jupyter", 1)
+		var affinity *corev1.Affinity
+
+		log.Printf("Searching for pod with name '%s'", podName)
+		pod, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		if err != nil {
+			log.Printf("Error searching for pod '%s': %s", podName, err)
+		} else if pod != nil {
+			log.Printf("Found currently running pod '%s' for pvc '%s'. Adding node affinity.", pod.Name, pvc.Name)
+
+			if pod.Spec.NodeName != "" {
+				affinity = &corev1.Affinity{
+					NodeAffinity: &corev1.NodeAffinity{
+						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
+							{
+								Weight: 1,
+								Preference: corev1.NodeSelectorTerm{
+									// Add a match field which matches the node's metadata.name field to the
+									// nodename the pod is running on.
+									MatchFields: []corev1.NodeSelectorRequirement{
+										{
+											Key:      "metadata.name",
+											Operator: corev1.NodeSelectorOpIn,
+											Values: []string{
+												pod.Spec.NodeName,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			}
+		} else {
+			log.Printf("No pod found with name '%s'", podName)
 		}
 
 		userName := backup.GetUserNameFromPVCName(pvc.Name)
@@ -114,6 +154,7 @@ func main() {
 									{
 										Name:      "user-backup",
 										MountPath: "/backup",
+										ReadOnly:  true,
 									},
 								},
 							},
@@ -131,6 +172,7 @@ func main() {
 								},
 							},
 						},
+						Affinity: affinity,
 					},
 				},
 			},
