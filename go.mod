@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/aws/aws-sdk-go v1.34.21
+	github.com/peakgames/s3hash v0.1.1
 	github.com/spf13/afero v1.3.5
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect

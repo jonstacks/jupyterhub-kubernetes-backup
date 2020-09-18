@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/core"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +29,7 @@ func TestNamespaceFromEnvironment(t *testing.T) {
 }
 
 func TestNamespaceFromFile(t *testing.T) {
-	fs = afero.Afero{Fs: afero.NewMemMapFs()}
-	fs.WriteFile(NamespaceFile, []byte("my-namespace-from-file"), 0644)
+	core.Filesystem = &afero.Afero{Fs: afero.NewMemMapFs()}
+	core.Filesystem.WriteFile(NamespaceFile, []byte("my-namespace-from-file"), 0644)
 	assert.Equal(t, "my-namespace-from-file", Namespace())
 }
