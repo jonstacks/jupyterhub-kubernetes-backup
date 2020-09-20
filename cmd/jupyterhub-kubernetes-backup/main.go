@@ -1,20 +1,19 @@
 package main
 
 import (
-	"log"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	backendprovider "github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/backend"
 	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/config"
+	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/core"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
-// FatalIfError exits the program on error
-func FatalIfError(err error) {
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+func init() {
+	logrus.SetFormatter(config.GetLogFormatter())
+	logrus.SetLevel(config.GetLogLevel())
 }
 
 func main() {
@@ -26,14 +25,14 @@ func main() {
 		backend = "mock"
 	}
 
-	log.Printf("Using %s backend", backend)
+	logrus.Infof("Using %s backend", backend)
 
 	var bkend backendprovider.Backend
 
 	switch strings.ToLower(backend) {
 	case "s3":
 		variables.Check(config.BackendS3Bucket, config.BackendS3Prefix, config.BackupUsername)
-		FatalIfError(variables.Missing())
+		core.FatalIfError(variables.Missing())
 
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
@@ -47,10 +46,10 @@ func main() {
 		)
 
 	default:
-		FatalIfError(variables.Missing())
+		core.FatalIfError(variables.Missing())
 		bkend = backendprovider.NewMock(afero.NewOsFs())
 	}
 
-	FatalIfError(bkend.Save(config.Get(config.LocalPath)))
-	log.Printf("Successfully backed up %s", config.Get(config.LocalPath))
+	core.FatalIfError(bkend.Save(config.Get(config.LocalPath)))
+	logrus.Infof("Successfully backed up %s", config.Get(config.LocalPath))
 }

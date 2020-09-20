@@ -1,10 +1,10 @@
 package backend
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -32,7 +32,7 @@ func (m Mock) Save(basePath string) error {
 		}
 
 		if info.IsDir() {
-			log.Printf("Entering directory: %s", path)
+			logrus.Debugf("Entering directory: %s", path)
 			return nil
 		}
 
@@ -41,7 +41,7 @@ func (m Mock) Save(basePath string) error {
 			return err
 		}
 
-		log.Printf("Processing file %s", rel)
+		logrus.Infof("Processing file %s", rel)
 		return nil
 	})
 }

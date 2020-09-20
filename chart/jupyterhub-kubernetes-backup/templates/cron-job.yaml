@@ -38,6 +38,10 @@ spec:
               value: "{{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}"
             - name: BACKEND
               value: "{{ .Values.backend.type }}"
+            - name: LOG_LEVEL
+              value: "{{ .Values.log.level }}"
+            - name: LOG_FORMAT
+              value: "{{ .Values.log.format }}"
             {{- if .Values.backend.s3 }}
             {{- if .Values.backend.s3.bucket }}
             - name: BACKEND_S3_BUCKET
