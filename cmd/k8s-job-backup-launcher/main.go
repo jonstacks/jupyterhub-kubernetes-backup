@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -11,7 +10,9 @@ import (
 
 	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/backup"
 	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/config"
+	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/core"
 	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/k8scontrib"
+	"github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,10 +20,9 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func fatalIfError(err error) {
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+func init() {
+	logrus.SetFormatter(config.GetLogFormatter())
+	logrus.SetLevel(config.GetLogLevel())
 }
 
 func main() {
@@ -31,24 +31,24 @@ func main() {
 
 	imageName, ok := os.LookupEnv("BACKUP_IMAGE_NAME")
 	if !ok {
-		fatalIfError(fmt.Errorf("No BACKUP_IMAGE_NAME variable supplied. Don't know how to launch backup container"))
+		core.FatalIfError(fmt.Errorf("No BACKUP_IMAGE_NAME variable supplied. Don't know how to launch backup container"))
 	}
 
 	clusterConfig, err := rest.InClusterConfig()
-	fatalIfError(err)
+	core.FatalIfError(err)
 
 	clientset, err := kubernetes.NewForConfig(clusterConfig)
-	fatalIfError(err)
+	core.FatalIfError(err)
 
 	namespace := k8scontrib.Namespace()
 
 	pvcList, err := clientset.CoreV1().PersistentVolumeClaims(namespace).List(context.TODO(), metav1.ListOptions{})
-	fatalIfError(err)
+	core.FatalIfError(err)
 
 	for _, pvc := range pvcList.Items {
 		// Jupyterhub spawns its user data PVCs with "claim-", we are not interested if it doesn't start with this
 		if !strings.HasPrefix(pvc.Name, "claim-") {
-			log.Printf("Skipping pvc '%s'", pvc.Name)
+			logrus.Debugf("Skipping pvc '%s'", pvc.Name)
 			continue
 		}
 
@@ -56,12 +56,12 @@ func main() {
 		podName := strings.Replace(pvc.Name, "claim", "jupyter", 1)
 		var affinity *corev1.Affinity
 
-		log.Printf("Searching for pod with name '%s'", podName)
+		logrus.Infof("Searching for pod with name '%s'", podName)
 		pod, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
-			log.Printf("Error searching for pod '%s': %s", podName, err)
+			logrus.Debugf("Error searching for pod '%s': %s", podName, err)
 		} else if pod != nil {
-			log.Printf("Found currently running pod '%s' for pvc '%s'. Adding node affinity.", pod.Name, pvc.Name)
+			logrus.Infof("Found currently running pod '%s' for pvc '%s'. Adding node affinity.", pod.Name, pvc.Name)
 
 			if pod.Spec.NodeName != "" {
 				affinity = &corev1.Affinity{
@@ -88,7 +88,7 @@ func main() {
 				}
 			}
 		} else {
-			log.Printf("No pod found with name '%s'", podName)
+			logrus.Debugf("No pod found with name '%s'", podName)
 		}
 
 		userName := backup.GetUserNameFromPVCName(pvc.Name)
@@ -114,6 +114,8 @@ func main() {
 			config.AwsAccessKeyID,
 			config.AwsSecretAccessKey,
 			config.AwsDefaultRegion,
+			config.LogLevel,
+			config.LogFormat,
 		}
 
 		for _, name := range copyVars {
@@ -178,25 +180,25 @@ func main() {
 			},
 		}
 
-		log.Printf("Creating job to back up pvc '%s'", pvc.Name)
+		logrus.Infof("Creating job to back up pvc '%s'", pvc.Name)
 		resp, err := clientset.BatchV1().Jobs(namespace).Create(context.TODO(), job, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("Err creating backup job for '%s': %s", pvc.Name, err.Error())
+			logrus.Errorf("Err creating backup job for '%s': %s", pvc.Name, err.Error())
 			hasError = true
 			continue
 		}
 
-		log.Printf("Successfully created job '%s' for backing up '%s'\n", resp.Name, pvc.Name)
+		logrus.Infof("Successfully created job '%s' for backing up '%s'\n", resp.Name, pvc.Name)
 		jobsWg.Add(1)
 
 		// Now start go-routing to wait and monitor for job to be done...
 		go func(jobName string) {
 			defer jobsWg.Done()
 			defer func() {
-				log.Printf("Deleting job '%s'", jobName)
+				logrus.Infof("Deleting job '%s'", jobName)
 				err := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
 				if err != nil {
-					log.Printf("Error deleting job '%s': %s", jobName, err)
+					logrus.Errorf("Error deleting job '%s': %s", jobName, err)
 				}
 			}()
 
@@ -205,13 +207,13 @@ func main() {
 			for {
 				select {
 				case <-timeout:
-					log.Printf("Timeout occured waiting for job to finish")
+					logrus.Errorf("Timeout occured waiting for job to finish")
 					return
 				default:
-					log.Printf("Checking on job '%s' status", jobName)
+					logrus.Infof("Checking on job '%s' status", jobName)
 					resp, err := clientset.BatchV1().Jobs(namespace).Get(context.TODO(), jobName, metav1.GetOptions{})
 					if err != nil {
-						log.Printf("Error checking job '%s' status: %s", jobName, err)
+						logrus.Errorf("Error checking job '%s' status: %s", jobName, err)
 						time.Sleep(30 * time.Second)
 						continue
 					}
@@ -224,7 +226,7 @@ func main() {
 
 					for _, cond := range resp.Status.Conditions {
 						if cond.Type == batchv1.JobFailed {
-							log.Printf("Job %s failed. Leaving it around for diagnostics", jobName)
+							logrus.Infof("Job %s failed. Leaving it around for diagnostics", jobName)
 							return
 						}
 					}
@@ -236,7 +238,7 @@ func main() {
 	}
 
 	if hasError {
-		log.Println("Error: Some jobs failed to create")
+		logrus.Errorf("Error: Some jobs failed to create")
 	}
 
 	jobsWg.Wait()

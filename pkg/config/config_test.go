@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,4 +35,39 @@ func TestGetDefault(t *testing.T) {
 		assert.Equal(t, "my-backend", GetDefault(Backend, "mock"))
 		assert.Equal(t, "defaultValue", GetDefault(LocalPath, "defaultValue"))
 	})
+}
+
+func TestGetLogLevel(t *testing.T) {
+	tests := map[string]logrus.Level{
+		"":      logrus.InfoLevel, // Default
+		"PANIC": logrus.PanicLevel,
+		"DEBUG": logrus.DebugLevel,
+		"TRACE": logrus.TraceLevel,
+		"ERROR": logrus.ErrorLevel,
+		"INFO":  logrus.InfoLevel,
+		"BAD":   logrus.InfoLevel,
+	}
+	for env, lvl := range tests {
+		withEnv(map[string]string{
+			LogLevel: env,
+		}, func() {
+			assert.Equal(t, lvl, GetLogLevel())
+		})
+	}
+}
+
+func TestGetLogFormatter(t *testing.T) {
+	tests := map[string]logrus.Formatter{
+		"":     &logrus.TextFormatter{}, // Default
+		"TEXT": &logrus.TextFormatter{},
+		"JSON": &logrus.JSONFormatter{},
+	}
+
+	for env, fmt := range tests {
+		withEnv(map[string]string{
+			LogFormat: env,
+		}, func() {
+			assert.Equal(t, fmt, GetLogFormatter())
+		})
+	}
 }

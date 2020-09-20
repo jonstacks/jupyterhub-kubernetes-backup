@@ -3,7 +3,6 @@ package backend
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/jonstacks/jupyterhub-kubernetes-backup/pkg/core"
 	"github.com/peakgames/s3hash"
+	"github.com/sirupsen/logrus"
 )
 
 type s3Uploader interface {
@@ -50,7 +50,7 @@ func (s S3) Save(basePath string) error {
 		}
 
 		if info.IsDir() {
-			log.Printf("Entering directory: %s", path)
+			logrus.Debugf("Entering directory: %s", path)
 			return nil
 		}
 
@@ -62,13 +62,13 @@ func (s S3) Save(basePath string) error {
 		key := fmt.Sprintf("%s/%s", s.prefix, rel)
 
 		if !s.isObjectDirty(key, path) {
-			log.Printf("File '%s' is already up to date in S3", key)
+			logrus.Infof("File '%s' is already up to date in S3 based on ETag", key)
 			return nil
 		}
 
 		f, err := core.Filesystem.Open(path)
 		if err != nil {
-			log.Printf("Error opening file '%s': %s", path, err.Error())
+			logrus.Errorf("Error opening file '%s': %s", path, err.Error())
 			return err
 		}
 		defer f.Close()
@@ -79,10 +79,10 @@ func (s S3) Save(basePath string) error {
 			Body:   f,
 		}
 
-		log.Printf("[Local] '%s' -> [s3://%s] '%s'", path, s.bucket, key)
+		logrus.Infof("[Local] '%s' -> [s3://%s] '%s'", path, s.bucket, key)
 		_, err = s.uploader.Upload(s3Params)
 		if err != nil {
-			log.Printf("Error uploading local file %s: %s", path, err.Error())
+			logrus.Errorf("Error uploading local file %s: %s", path, err.Error())
 		}
 
 		return err
@@ -111,5 +111,12 @@ func (s S3) isObjectDirty(key string, path string) bool {
 		return true
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"local.etag":    localEtag,
+		"local.path":    path,
+		"remote.etag":   s3Etag,
+		"remote.key":    key,
+		"remote.bucket": s.bucket,
+	}).Debugf("Comparing ETags to find if object is dirty")
 	return s3Etag != localEtag
 }

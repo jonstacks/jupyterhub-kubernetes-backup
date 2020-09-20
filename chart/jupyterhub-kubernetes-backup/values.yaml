@@ -39,3 +39,7 @@ resources: {}
 cronJob:
   concurrencyPolicy: Forbid
   schedule: "0/30 * * * *" # Run every 30 minutes
+
+log:
+  level: INFO
+  format: TEXT
