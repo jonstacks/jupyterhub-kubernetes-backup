@@ -92,7 +92,7 @@ func (suite *S3BackendSuite) SetupTest() {
 		injectError: false,
 		responses: map[string]*s3.HeadObjectOutput{
 
-			suite.fullKeyPath("test1.txt"):           {ETag: aws.String("88c16a56754e0f17a93d269ae74dde9b")},
+			suite.fullKeyPath("test1.txt"):           {ETag: aws.String("\"88c16a56754e0f17a93d269ae74dde9b\"")},
 			suite.fullKeyPath("test2.txt"):           {ETag: aws.String("")},
 			suite.fullKeyPath("subfolder/test3.txt"): {ETag: aws.String("")},
 		},

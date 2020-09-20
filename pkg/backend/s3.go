@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -105,7 +106,7 @@ func (s S3) isObjectDirty(key string, path string) bool {
 		return true
 	}
 
-	s3Etag := aws.StringValue(resp.ETag)
+	s3Etag := strings.Trim(aws.StringValue(resp.ETag), "\"")
 	localEtag, err := s3hash.Calculate(bytes.NewReader(fileContents), s3manager.DefaultUploadPartSize)
 	if err != nil {
 		return true
