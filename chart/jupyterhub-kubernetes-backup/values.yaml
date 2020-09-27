@@ -24,6 +24,12 @@ backend:
   #   secret: my-secret
   #   region: us-west-2
 
+backup:
+  # required means that if a user's jupyterhub pod is running, the backup job will be created
+  # with a NodeAffinity that is required during scheduling. Setting it to preferred or anything
+  # else but an empty string will change the NodeAffinity to preferred during scheduling.
+  podNodeAffinity: required
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
