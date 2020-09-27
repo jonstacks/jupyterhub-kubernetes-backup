@@ -25,6 +25,31 @@ func init() {
 	logrus.SetLevel(config.GetLogLevel())
 }
 
+func cleanupSuccessfulBackupPods(clientset *kubernetes.Clientset, namespace string) {
+	logrus.Info("Cleaning up pods that have exited successfully")
+
+	resp, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		logrus.Errorf("Unable to list pods to clean up: %s", err)
+	}
+
+	for _, pod := range resp.Items {
+		if !strings.HasPrefix(pod.Name, "backup-users-home") {
+			continue
+		}
+		if pod.Status.Phase != corev1.PodSucceeded {
+			continue
+		}
+		logrus.Debugf("Deleting pod '%s'", pod.Name)
+		err = clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+		if err != nil {
+			logrus.Errorf("Unable to delete pod '%s'", pod.Name)
+			continue
+		}
+		logrus.Infof("Successfully deleted pod '%s'", pod.Name)
+	}
+}
+
 func main() {
 	var hasError = false
 	var jobsWg sync.WaitGroup
@@ -225,4 +250,6 @@ func main() {
 	}
 
 	jobsWg.Wait()
+
+	cleanupSuccessfulBackupPods(clientset, namespace)
 }
