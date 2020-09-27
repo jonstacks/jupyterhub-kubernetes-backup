@@ -42,6 +42,8 @@ spec:
               value: "{{ .Values.log.level }}"
             - name: LOG_FORMAT
               value: "{{ .Values.log.format }}"
+            - name: BACKUP_POD_NODE_AFFINITY
+              value: "{{ .Values.backup.podNodeAffinity }}"
             {{- if .Values.backend.s3 }}
             {{- if .Values.backend.s3.bucket }}
             - name: BACKEND_S3_BUCKET

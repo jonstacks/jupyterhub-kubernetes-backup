@@ -55,6 +55,7 @@ func main() {
 		// If a pod is running, this is the name we'd expect to find
 		podName := strings.Replace(pvc.Name, "claim", "jupyter", 1)
 		var affinity *corev1.Affinity
+		var tolerations []corev1.Toleration
 
 		logrus.Infof("Searching for pod with name '%s'", podName)
 		pod, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
@@ -62,31 +63,11 @@ func main() {
 			logrus.Debugf("Error searching for pod '%s': %s", podName, err)
 		} else if pod != nil {
 			logrus.Infof("Found currently running pod '%s' for pvc '%s'. Adding node affinity.", pod.Name, pvc.Name)
-
 			if pod.Spec.NodeName != "" {
-				affinity = &corev1.Affinity{
-					NodeAffinity: &corev1.NodeAffinity{
-						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
-							{
-								Weight: 1,
-								Preference: corev1.NodeSelectorTerm{
-									// Add a match field which matches the node's metadata.name field to the
-									// nodename the pod is running on.
-									MatchFields: []corev1.NodeSelectorRequirement{
-										{
-											Key:      "metadata.name",
-											Operator: corev1.NodeSelectorOpIn,
-											Values: []string{
-												pod.Spec.NodeName,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
+				affinity = backup.GetNodeAffinityForBackupPod(pod.Spec.NodeName, config.GetBackupPodNodeAffinityRequired())
 			}
+			// Copy the tolerations from the user's pod to the backup pod.
+			tolerations = pod.Spec.Tolerations
 		} else {
 			logrus.Debugf("No pod found with name '%s'", podName)
 		}
@@ -111,6 +92,7 @@ func main() {
 			config.BackendS3Bucket,
 			config.BackendS3Prefix,
 			config.BackupUsername,
+			config.BackupPodNodeAffinity,
 			config.AwsAccessKeyID,
 			config.AwsSecretAccessKey,
 			config.AwsDefaultRegion,
@@ -174,7 +156,8 @@ func main() {
 								},
 							},
 						},
-						Affinity: affinity,
+						Affinity:    affinity,
+						Tolerations: tolerations,
 					},
 				},
 			},

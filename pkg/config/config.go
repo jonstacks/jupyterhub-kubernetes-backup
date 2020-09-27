@@ -10,8 +10,9 @@ import (
 
 // Default config constants
 const (
-	LocalPath      = "LOCAL_PATH"
-	BackupUsername = "BACKUP_USERNAME"
+	LocalPath             = "LOCAL_PATH"
+	BackupUsername        = "BACKUP_USERNAME"
+	BackupPodNodeAffinity = "BACKUP_POD_NODE_AFFINITY"
 
 	Backend         = "BACKEND"
 	DefaultBackend  = "mock"
@@ -71,4 +72,14 @@ func GetLogFormatter() logrus.Formatter {
 		return &logrus.JSONFormatter{}
 	}
 	return defaultLogFormatter
+}
+
+// GetBackupPodNodeAffinityRequired returns true if the config indicates that
+// we should require the nodeAffinity for the backup pod as opposed to just preferring it.
+func GetBackupPodNodeAffinityRequired() bool {
+	val := strings.TrimSpace(os.Getenv(BackupPodNodeAffinity))
+	if val == "" {
+		return true // default value
+	}
+	return strings.ToLower(val) == "required"
 }

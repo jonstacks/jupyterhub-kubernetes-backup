@@ -71,3 +71,20 @@ func TestGetLogFormatter(t *testing.T) {
 		})
 	}
 }
+
+func TestGetBackupPodNodeAffinityRequired(t *testing.T) {
+	tests := map[string]bool{
+		"":          true,
+		"preferred": false,
+		"PREFERRED": false,
+		"required":  true,
+		"REQUIRED":  true,
+	}
+	for env, expected := range tests {
+		withEnv(map[string]string{
+			BackupPodNodeAffinity: env,
+		}, func() {
+			assert.Equal(t, expected, GetBackupPodNodeAffinityRequired())
+		})
+	}
+}
