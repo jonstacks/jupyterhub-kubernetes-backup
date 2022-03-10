@@ -21,8 +21,14 @@ backend:
   #   bucket: my-bucket
   #   prefix: my-prefix
   #   accessKey: my-access-key
-  #   secret: my-secret
+  #   secretKey: my-secret
   #   region: us-west-2
+  #
+  # If you have an existing secret that you want to use, you can specify the name here:
+  # s3:
+  #  existingSecret: my-secret
+  #
+  # It is expected that the secret contains the following keys: [aws-access-key-id, aws-secret-access-key]
 
 backup:
   # required means that if a user's jupyterhub pod is running, the backup job will be created

@@ -27,7 +27,7 @@ spec:
           containers:
           - name: jupyterhub-backup-launcher
             image: {{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}
-            pullPolicy: {{ .Values.image.pullPolicy }}
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
             command: ["/usr/local/bin/k8s-job-backup-launcher"]
             env:
             - name: POD_NAMESPACE
@@ -53,13 +53,25 @@ spec:
             - name: BACKEND_S3_PREFIX
               value: "{{ .Values.backend.s3.prefix }}"
             {{- end }}
-            {{- if .Values.backend.s3.accessKey }}
+            {{- if .Values.backend.s3.existingSecret }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.s3.existingSecret }}
+                  key: aws-access-key-id
+            {{- else if .Values.backend.s3.accessKey }}
             - name: AWS_ACCESS_KEY_ID
               value: "{{ .Values.backend.s3.accessKey }}"
             {{- end }}
-            {{- if .Values.backend.s3.secret }}
+            {{- if .Values.backend.s3.existingSecret }}
             - name: AWS_SECRET_ACCESS_KEY
-              value: "{{ .Values.backend.s3.secret }}"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.s3.existingSecret }}
+                  key: aws-secret-access-key
+            {{- else if .Values.backend.s3.secretKey }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "{{ .Values.backend.s3.secretKey }}"
             {{- end }}
             {{- if .Values.backend.s3.region }}
             - name: AWS_DEFAULT_REGION
