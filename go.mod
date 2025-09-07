@@ -1,6 +1,6 @@
 module github.com/jonstacks/jupyterhub-kubernetes-backup
 
-go 1.18
+go 1.24
 
 require (
 	github.com/aws/aws-sdk-go v1.47.9
